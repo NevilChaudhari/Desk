@@ -118,10 +118,11 @@ async def websocket_endpoint(
 
             print("WEBSOCKET DATA RECEIVED:", data)
 
-            username = data.get("sender")
+            senderUsername = data.get("senderUsername")
+            sender = data.get("sender")
             message = data.get("message")
 
-            if not username:
+            if not sender:
                 await websocket.send_json({
                     "error": "Username is required"
                 })
@@ -136,7 +137,8 @@ async def websocket_endpoint(
             await manager.broadcast(
                 chat_id,
                 {
-                    "sender": username,
+                    "users": {"username": senderUsername},
+                    "sender": sender,
                     "message": message
                 }
             )
