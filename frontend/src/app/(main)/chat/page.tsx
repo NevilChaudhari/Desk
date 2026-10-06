@@ -1,7 +1,7 @@
 'use client'
 
 import { supabase } from "@/libs/supabase/supabase";
-import { Sun, Moon, Plus, Users, ChevronRight, X, Copy } from "lucide-react";
+import { Sun, Moon, Plus, Users, ChevronRight, X, Copy, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import CreateGroupModal from "./popup";
@@ -20,6 +20,11 @@ type Group = {
     chatId: string;
     name: string;
 };
+type PrivateChat = {
+    chatId: string;
+    user1: User;
+    user2: User;
+};
 type User = {
     id: string
     username: string
@@ -36,7 +41,9 @@ export default function Chat() {
     const [message, setMessage] = useState<string>('')
     const [messages, setMessages] = useState<Message[]>([]);
     const [groups, setGroups] = useState<Member[]>([]);
-    const [selectedGroup, setSelectedGroup] = useState<Group>();
+    const [privateChats, setPrivateChats] = useState<PrivateChat[]>([]);
+    const [selectedGroup, setSelectedGroup] = useState<string>('');
+    const [messagePopup, setMessagePopup] = useState<Message|null>(null);
 
     useEffect(() => {
         const getUser = async () => {
@@ -52,6 +59,7 @@ export default function Chat() {
             const data = await res.json();
             setUser(data);
             fetchGroups(id)
+            fetchPrivateChats(id)
         }
         getUser()
     }, [router, supabase])
@@ -77,12 +85,20 @@ export default function Chat() {
             setGroups(data);
         }
     }
+    const fetchPrivateChats = async (id: string) => {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/getPrivateChats/${id}`)
+        const data = await res.json()
+        if (data.length > 0) {
+            setPrivateChats(data);
+            console.table(data)
+        }
+    }
 
     useEffect(() => {
         if (selectedGroup) {
             setMessages([])
-            fetchMessages(selectedGroup.chatId)
-            fetchMembers(selectedGroup.chatId)
+            fetchMessages(selectedGroup)
+            fetchMembers(selectedGroup)
         }
     }, [selectedGroup])
 
@@ -100,7 +116,7 @@ export default function Chat() {
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sendMessage`, {
                     method: 'POST',
                     headers: { "Content-Type": "application/json", },
-                    body: JSON.stringify({ sender: userId, message: message, chatId: selectedGroup?.chatId })
+                    body: JSON.stringify({ sender: userId, message: message, chatId: selectedGroup })
                 })
             }
             sendMsg()
@@ -109,9 +125,9 @@ export default function Chat() {
     }
     const socketRef = useRef<WebSocket | null>(null);
     useEffect(() => {
-        if(!selectedGroup) return
+        if (!selectedGroup) return
         const socket = new WebSocket(
-            `ws://127.0.0.1:8000/ws/${selectedGroup.chatId}`
+            `ws://127.0.0.1:8000/ws/${selectedGroup}`
         );
 
         socketRef.current = socket;
@@ -163,7 +179,7 @@ export default function Chat() {
             alert(data.detail)
             return;
         }
-        const chatID = await data.chatId;
+        const chatID = await data.id;
         const res2 = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/addmember`, {
             method: 'POST',
             headers: { "Content-Type": "application/json", },
@@ -197,6 +213,22 @@ export default function Chat() {
         fetchGroups(userId ? userId : '')
     }
 
+    const messageUser = async (user1: string, user2: string) => {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/createPrivateChat`, {
+            headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            body: JSON.stringify({
+                user1: user1,
+                user2: user2,
+            })
+        })
+        const data = await res.json()
+        if(data && userId){
+            setMessagePopup(null)
+            fetchPrivateChats(userId)
+        }
+    }
+
     return (
         <div className="w-full h-full bg-background flex flex-col text-foreground">
             <div className="absolute">
@@ -215,12 +247,21 @@ export default function Chat() {
             <div className="flex w-full flex-1 h-full">
                 {/* Sidebar 2 */}
                 <div className="flex flex-col min-w-50 w-[20%] border-r border-border">
-                    <div className="flex items-center place-content-between h-15 p-2 mx-5 border-b border-border text-xl">Chats <button onClick={() => setShowModal(!showModal)}><Plus /></button></div>
+                    <div className="flex items-center place-content-between h-15 p-2 mx-5 border-b border-border text-xl">Chats ({groups.length}) <button onClick={() => setShowModal(!showModal)}><Plus /></button></div>
                     <div className="flex flex-col gap-2 py-2 mx-5">
                         {groups.map((grp, index) => (
-                            <div onClick={() => setSelectedGroup(grp.group)} key={index} className={`flex gap-3 items-center cursor-pointer ${selectedGroup?.chatId == grp.group.chatId ? 'bg-[#7F85F5]/50' : 'hover:bg-[#7F85F5]/30'} px-2 py-3 rounded-md`}>
+                            <div onClick={() => setSelectedGroup(grp.group.chatId)} key={index} className={`flex gap-3 items-center cursor-pointer ${selectedGroup == grp.group.chatId ? 'bg-[#7F85F5]/50' : 'hover:bg-[#7F85F5]/30'} px-2 py-3 rounded-md`}>
                                 <Users />
                                 <span className="font-semibold text-xl">{grp.group.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex items-center place-content-between h-15 p-2 mx-5 border-b border-t border-border text-xl">Private Chats ({privateChats.length})</div>
+                    <div className="flex flex-col gap-2 py-2 mx-5">
+                        {privateChats.map((grp, index) => (
+                            <div onClick={() => setSelectedGroup(grp.chatId)} key={index} className={`flex gap-3 items-center cursor-pointer ${selectedGroup == grp.chatId ? 'bg-[#7F85F5]/50' : 'hover:bg-[#7F85F5]/30'} px-2 py-3 rounded-md`}>
+                                <User />
+                                <span className="font-semibold text-xl">{grp.user1.id == userId ? grp.user2.username : grp.user1.username}</span>
                             </div>
                         ))}
                     </div>
@@ -228,14 +269,15 @@ export default function Chat() {
                 {/* Main Window */}
                 <div className="flex flex-col flex-1">
                     {selectedGroup && (<div className="flex border-b border-border h-15 px-5 w-full items-center font-semibold text-xl place-content-between">
-                        <span>{selectedGroup.name}</span>
+                        <span>{selectedGroup}</span>
                         {!showGroupDetails && (<div onClick={() => setShowGroupDetails(!showGroupDetails)} className={`flex w-10 h-10 items-center justify-center rounded-full ${showGroupDetails ? 'bg-primary/50' : ''} hover:bg-primary/30 cursor-pointer`}><ChevronRight /></div>)}
                     </div>)}
                     <div className="flex-1 overflow-y-auto p-6 h-full slim-scrollbar">
                         {messages.map((msg, index) => (
                             <div key={index} className={`mb-4 ${msg.sender == userId ? 'justify-end' : ''} flex`}>
-                                <div className="flex items-center gap-2">
-                                    {msg.sender != userId && (<div className={`border cursor-pointer border-border w-10 h-10 rounded-full bg-accent items-center justify-center flex ${msg.sender == userId ? 'text-end' : 'text-start'}`}>{msg.users.username.slice(0,2)}</div>)}
+                                <div className="flex items-center gap-2 relative">
+                                    {msg.sender != userId && messagePopup == msg && (<div onClick={() => userId ? messageUser(userId, msg.sender) : alert('Error: userId not found')} className="p-2 rounded-r-md bg-[#7F85F5] bottom-11 cursor-pointer">Message</div>)}
+                                    {msg.sender != userId && (<div onClick={() => setMessagePopup(msg)} className={`border cursor-pointer border-border w-10 h-10 rounded-full bg-accent items-center justify-center flex ${msg.sender == userId ? 'text-end' : 'text-start'}`}>{msg.users.username.slice(0, 2)}</div>)}
                                     <div className={`p-2 rounded-b-2xl ${msg.sender == userId ? 'bg-blue-400 rounded-l-2xl' : 'bg-purple-400 rounded-r-2xl'}`}>{msg.message}</div>
                                 </div>
                             </div>
@@ -255,7 +297,7 @@ export default function Chat() {
                         </div>
                         <div className="flex flex-col gap-1 px-5 py-2">
                             <span className="">GroupId:</span>
-                            <span title="click to copy!" onClick={() => navigator.clipboard.writeText(selectedGroup?.chatId ?? "")} className="text-blue-400 flex gap-2 items-center cursor-pointer">{selectedGroup?.chatId}<Copy size={15} /></span>
+                            <span title="click to copy!" onClick={() => navigator.clipboard.writeText(selectedGroup ?? "")} className="text-blue-400 flex gap-2 items-center cursor-pointer">{selectedGroup}<Copy size={15} /></span>
                         </div>
                         <div className="flex flex-col gap-1 px-5 py-2">
                             <span className="">Members:</span>

@@ -168,7 +168,7 @@ class Message(BaseModel):
 async def getUser(message: Message):
     try:
         print(f'message data received: {message}')
-        res = supabase.table('chat').insert(message.model_dump()).execute()
+        res = supabase.table('chat').insert({'sender': message.sender, 'message': message.message, 'chatId': message.chatId}).execute()
         if not res.data:
             raise HTTPException(
                 status_code=404,
@@ -183,6 +183,7 @@ async def getUser(message: Message):
 
 @app.get('/api/getMessages/{id}')
 async def getUser(id: str):
+    print(f'get message data {id}')
     res = supabase.table("chat").select("*,users(*)").eq('chatId', id).execute()
     if not res.data:
         raise HTTPException(
@@ -198,8 +199,14 @@ class Group(BaseModel):
 async def getUser(group: Group):
     try:
         print(f'createGroup data received: {group}')
-        res = supabase.table('group').insert(group.model_dump()).execute()
+        res = supabase.table('chatIds').insert({}).select('*').execute()
         if not res.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Data not found"
+            )
+        res2 = supabase.table('group').insert({'chatId': res.data[0].get('id'), 'name': group.name}).execute()
+        if not res2.data:
             raise HTTPException(
                 status_code=404,
                 detail="Data not found"
@@ -219,7 +226,7 @@ class Member(BaseModel):
 async def getUser(member: Member):
     try:
         print(f'addMember data received: {member}')
-        res = supabase.table('members').insert(member.model_dump()).execute()
+        res = supabase.table('members').insert({'userId': member.userId, 'chatId': member.chatId}).execute()
         if not res.data:
             raise HTTPException(
                 status_code=404,
@@ -258,3 +265,47 @@ async def getUser(id: str):
             detail="Messages not found"
         )
     return res.data
+
+class PrivateChat(BaseModel):
+    user1:str
+    user2:str
+
+@app.post('/api/createPrivateChat')
+async def getUser(privateChat: PrivateChat):
+    try:
+        print(f'addMember data received: {privateChat}')
+        res = supabase.table('chatIds').insert({}).select('*').execute()
+        if not res.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Data not found"
+            )
+        res2 = supabase.table('privateChat').insert({'chatId': res.data[0].get('id'), 'user1': privateChat.user1, 'user2': privateChat.user2}).execute()
+        if not res2.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Data not found"
+            )
+        return res.data[0]
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
+@app.get('/api/getPrivateChats/{userId}')
+async def getGroups(userId: str):
+    try:
+        print(f'getGroups data received: {userId}')
+        res = supabase.table("privateChat").select("*,""user1:users!privateChat_user1_fkey(*),""user2:users!privateChat_user2_fkey(*)").or_(f"user1.eq.{userId},user2.eq.{userId}").execute()
+        if not res.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Data not found"
+            )
+        return res.data
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
