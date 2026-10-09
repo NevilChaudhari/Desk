@@ -121,6 +121,7 @@ async def websocket_endpoint(
             senderUsername = data.get("senderUsername")
             sender = data.get("sender")
             message = data.get("message")
+            created_at = data.get("created_at")
 
             if not sender:
                 await websocket.send_json({
@@ -139,7 +140,8 @@ async def websocket_endpoint(
                 {
                     "users": {"username": senderUsername},
                     "sender": sender,
-                    "message": message
+                    "message": message,
+                    "created_at": created_at,
                 }
             )
 

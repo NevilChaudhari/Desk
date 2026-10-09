@@ -1,16 +1,18 @@
 'use client'
 
 import { supabase } from "@/libs/supabase/supabase";
-import { Sun, Moon, Plus, Users, ChevronRight, X, Copy, User } from "lucide-react";
+import { Sun, Moon, Plus, Users, ChevronRight, X, Copy, User, SendHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import CreateGroupModal from "./popup";
+import { format } from "date-fns";
 
 type theme = 'Dark' | 'Light'
 type Message = {
     sender: string;
     message: string;
-    users: User
+    users: User;
+    created_at: string;
 };
 type Member = {
     users: User;
@@ -42,8 +44,8 @@ export default function Chat() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [groups, setGroups] = useState<Member[]>([]);
     const [privateChats, setPrivateChats] = useState<PrivateChat[]>([]);
-    const [selectedGroup, setSelectedGroup] = useState<string>('');
-    const [messagePopup, setMessagePopup] = useState<Message|null>(null);
+    const [selectedGroup, setSelectedGroup] = useState<Group>();
+    const [messagePopup, setMessagePopup] = useState<Message | null>(null);
 
     useEffect(() => {
         const getUser = async () => {
@@ -97,8 +99,8 @@ export default function Chat() {
     useEffect(() => {
         if (selectedGroup) {
             setMessages([])
-            fetchMessages(selectedGroup)
-            fetchMembers(selectedGroup)
+            fetchMessages(selectedGroup.chatId)
+            fetchMembers(selectedGroup.chatId)
         }
     }, [selectedGroup])
 
@@ -110,13 +112,14 @@ export default function Chat() {
                     senderUsername: user?.username,
                     sender: userId,
                     message: message,
+                    created_at: new Date().toISOString(),
                 })
             );
             async function sendMsg() {
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sendMessage`, {
                     method: 'POST',
                     headers: { "Content-Type": "application/json", },
-                    body: JSON.stringify({ sender: userId, message: message, chatId: selectedGroup })
+                    body: JSON.stringify({ sender: userId, message: message, chatId: selectedGroup?.chatId })
                 })
             }
             sendMsg()
@@ -127,7 +130,7 @@ export default function Chat() {
     useEffect(() => {
         if (!selectedGroup) return
         const socket = new WebSocket(
-            `ws://127.0.0.1:8000/ws/${selectedGroup}`
+            `ws://127.0.0.1:8000/ws/${selectedGroup.chatId}`
         );
 
         socketRef.current = socket;
@@ -223,14 +226,14 @@ export default function Chat() {
             })
         })
         const data = await res.json()
-        if(data && userId){
+        if (data && userId) {
             setMessagePopup(null)
             fetchPrivateChats(userId)
         }
     }
 
     return (
-        <div className="w-full h-full bg-background flex flex-col text-foreground">
+        <div className="w-full h-full bg-[#192335] flex flex-col text-foreground">
             <div className="absolute">
                 {showModal && (<CreateGroupModal
                     open={showModal}
@@ -250,8 +253,8 @@ export default function Chat() {
                     <div className="flex items-center place-content-between h-15 p-2 mx-5 border-b border-border text-xl">Chats ({groups.length}) <button onClick={() => setShowModal(!showModal)}><Plus /></button></div>
                     <div className="flex flex-col gap-2 py-2 mx-5">
                         {groups.map((grp, index) => (
-                            <div onClick={() => setSelectedGroup(grp.group.chatId)} key={index} className={`flex gap-3 items-center cursor-pointer ${selectedGroup == grp.group.chatId ? 'bg-[#7F85F5]/50' : 'hover:bg-[#7F85F5]/30'} px-2 py-3 rounded-md`}>
-                                <Users />
+                            <div onClick={() => setSelectedGroup(grp.group)} key={index} className={`flex gap-3 items-center cursor-pointer ${selectedGroup?.chatId == grp.group.chatId ? 'bg-[#293052]' : 'hover:bg-[#293052]/50'} px-2 py-3 rounded-md`}>
+                                <div className={`border cursor-pointer border-border w-10 h-10 rounded-xl bg-accent items-center justify-center flex`}>{grp.group.name.slice(0, 2)}</div>
                                 <span className="font-semibold text-xl">{grp.group.name}</span>
                             </div>
                         ))}
@@ -259,36 +262,51 @@ export default function Chat() {
                     <div className="flex items-center place-content-between h-15 p-2 mx-5 border-b border-t border-border text-xl">Private Chats ({privateChats.length})</div>
                     <div className="flex flex-col gap-2 py-2 mx-5">
                         {privateChats.map((grp, index) => (
-                            <div onClick={() => setSelectedGroup(grp.chatId)} key={index} className={`flex gap-3 items-center cursor-pointer ${selectedGroup == grp.chatId ? 'bg-[#7F85F5]/50' : 'hover:bg-[#7F85F5]/30'} px-2 py-3 rounded-md`}>
-                                <User />
+                            <div onClick={() => setSelectedGroup({ chatId: grp.chatId, name: grp.user1.id == userId ? grp.user2.username : grp.user1.username })} key={index} className={`flex gap-3 items-center cursor-pointer ${selectedGroup?.chatId == grp.chatId ? 'bg-[#293052]' : 'hover:bg-[#293052]/50'} px-2 py-3 rounded-md`}>
+                                <div className={`border cursor-pointer border-border w-10 h-10 rounded-xl bg-accent items-center justify-center flex`}>{grp.user1.id == userId ? grp.user2.username.slice(0, 2) : grp.user1.username.slice(0, 2)}</div>
                                 <span className="font-semibold text-xl">{grp.user1.id == userId ? grp.user2.username : grp.user1.username}</span>
                             </div>
                         ))}
                     </div>
                 </div>
                 {/* Main Window */}
-                <div className="flex flex-col flex-1">
-                    {selectedGroup && (<div className="flex border-b border-border h-15 px-5 w-full items-center font-semibold text-xl place-content-between">
-                        <span>{selectedGroup}</span>
+                <div className="flex flex-col flex-1 bg-[#0d1426]">
+                    {selectedGroup && (<div className="flex border-b border-border h-15 px-5 w-full items-center font-semibold text-xl place-content-between bg-[#192335]">
+                        <div className="flex items-center gap-2">
+                            <div className={`border cursor-pointer border-border w-10 h-10 rounded-xl bg-[#293052] items-center justify-center flex`}>{selectedGroup.name.slice(0, 2)}</div>
+                            <span>{selectedGroup.name}</span>
+                        </div>
                         {!showGroupDetails && (<div onClick={() => setShowGroupDetails(!showGroupDetails)} className={`flex w-10 h-10 items-center justify-center rounded-full ${showGroupDetails ? 'bg-primary/50' : ''} hover:bg-primary/30 cursor-pointer`}><ChevronRight /></div>)}
                     </div>)}
+
+                    {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-6 h-full slim-scrollbar">
                         {messages.map((msg, index) => (
-                            <div key={index} className={`mb-4 ${msg.sender == userId ? 'justify-end' : ''} flex`}>
+                            <div key={index} className={`mb-1 ${msg.sender == userId ? 'justify-end' : ''} flex`}>
                                 <div className="flex items-center gap-2 relative">
                                     {msg.sender != userId && messagePopup == msg && (<div onClick={() => userId ? messageUser(userId, msg.sender) : alert('Error: userId not found')} className="p-2 rounded-r-md bg-[#7F85F5] bottom-11 cursor-pointer">Message</div>)}
-                                    {msg.sender != userId && (<div onClick={() => setMessagePopup(msg)} className={`border cursor-pointer border-border w-10 h-10 rounded-full bg-accent items-center justify-center flex ${msg.sender == userId ? 'text-end' : 'text-start'}`}>{msg.users.username.slice(0, 2)}</div>)}
-                                    <div className={`p-2 rounded-b-2xl ${msg.sender == userId ? 'bg-blue-400 rounded-l-2xl' : 'bg-purple-400 rounded-r-2xl'}`}>{msg.message}</div>
+                                    {msg.sender != userId && (<div onClick={() => messagePopup == null ? setMessagePopup(msg) : setMessagePopup(null)} className={`border cursor-pointer border-border w-10 h-10 rounded-full bg-accent items-center justify-center flex ${msg.sender == userId ? 'text-end' : 'text-start'} ${((index >= 1 && messages[index - 1].sender !== msg.sender) || (index == 0)) ? '' : 'opacity-0'}`}>{msg.users.username.slice(0, 2)}</div>)}
+                                    <div className="flex flex-col">
+                                        {((index >= 1 && messages[index - 1].sender !== msg.sender) || (index == 0)) && (<div className={`flex gap-2 items-center ${msg.sender == userId ? 'justify-end' : ''}`}>
+                                            <div className={`font-semibold`}>{msg.sender == userId ? 'You' : msg.users.username}</div>
+                                            <div className={`text-xs text-white/50`}>{msg.created_at ? format(msg.created_at, "hh:mm a") : ''}</div>
+                                        </div>)}
+                                        <div className={`flex ${msg.sender == userId ? 'justify-end' : ''}`}><div className={`p-3 rounded-b-2xl border border-white/30 ${msg.sender == userId ? 'bg-[#7b83fb] rounded-l-2xl' : 'bg-[#192335] rounded-r-2xl'} ${((index >= 1 && messages[index - 1].sender !== msg.sender) || (index == 0)) ? '' : 'rounded-t-2xl'}`}>{msg.message}</div></div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
                         <div ref={messagesEndRef} />
                     </div>
-                    <div className="flex gap-2 border-t border-border p-4">
-                        <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendMessage() }} placeholder="Type a message..." className="flex-1 rounded border px-4 py-2 outline-0" />
-                        <button onClick={sendMessage} className="rounded bg-foreground px-5 py-2 text-background">Send</button>
+                    <div className="flex gap-2 border-t border-border bg-[#192335] p-4">
+                        <div className="flex gap-2 w-full border border-white/20 rounded-xl px-3 py-2">
+                            <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendMessage() }} placeholder={`Message ${selectedGroup?.name}...`} className="flex-1 px-2 outline-0" />
+                            <button onClick={sendMessage} className="rounded-lg bg-[#8d97ff] p-2 text-background"><SendHorizontal size={15} /></button>
+                        </div>
                     </div>
                 </div>
+
+                {/* Group Details */}
                 {showGroupDetails && (
                     <div className="flex flex-col border-border border-l min-w-100">
                         <div className="flex place-content-between border-b border-border h-15 px-5 w-full items-center font-semibold text-xl">
@@ -297,7 +315,7 @@ export default function Chat() {
                         </div>
                         <div className="flex flex-col gap-1 px-5 py-2">
                             <span className="">GroupId:</span>
-                            <span title="click to copy!" onClick={() => navigator.clipboard.writeText(selectedGroup ?? "")} className="text-blue-400 flex gap-2 items-center cursor-pointer">{selectedGroup}<Copy size={15} /></span>
+                            <span title="click to copy!" onClick={() => navigator.clipboard.writeText(selectedGroup?.chatId ?? "")} className="text-blue-400 flex gap-2 items-center cursor-pointer">{selectedGroup?.chatId}<Copy size={15} /></span>
                         </div>
                         <div className="flex flex-col gap-1 px-5 py-2">
                             <span className="">Members:</span>

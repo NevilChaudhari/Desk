@@ -61,7 +61,7 @@ export default function Main({ children }: LayoutProps<"/">) {
     }
 
     return (
-        <div className="flex flex-col text-foreground bg-background w-screen h-screen">
+        <div className="flex flex-col text-foreground bg-[#121a2e] w-screen h-screen">
             {/* Header */}
             <div className="flex border-b gap-10 w-full min-h-12 h-[5%] justify-end items-center px-5 border-border">
                 <button onClick={changeTheme} className="cursor-pointer">{theme == 'Dark' ? <Sun /> : <Moon />}</button>
