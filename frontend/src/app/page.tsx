@@ -9,7 +9,7 @@ export default function Home() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hello`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/`)
       .then((res) => res.json())
       .then((data) => setMessage(data.message))
       .then(() => checkSession());
