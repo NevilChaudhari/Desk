@@ -21,13 +21,13 @@ supabase: Client = create_client(
 )
 frontend_url = os.getenv(
     "FRONTEND_URL",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://deskbynevil.vercel.app"
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],
+    allow_origins=[frontend_url,
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://deskbynevil.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
