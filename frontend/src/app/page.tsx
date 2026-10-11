@@ -22,7 +22,6 @@ export default function Home() {
         router.push('/signin')
       }
     }
-    document.documentElement.classList.toggle("dark", false);
   }, []);
 
 

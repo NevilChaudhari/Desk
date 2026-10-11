@@ -65,7 +65,7 @@ export default function CreateGroupModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl text-foreground bg-background p-6 shadow-2xl"
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl text-foreground bg-[#f5f5f5] dark:bg-[#242424] p-6 shadow-2xl"
       >
         {/* Header */}
         <div className="mb-6 flex items-start justify-between">
@@ -80,7 +80,7 @@ export default function CreateGroupModal({
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-lg p-2 text-black opacity-50 hover:opacity-100 cursor-pointer"
           >
             ✕
           </button>
@@ -88,12 +88,12 @@ export default function CreateGroupModal({
 
         {/* Group Name */}
         <div className="mb-4 flex place-content-around">
-          <label onClick={() => setJoinGrp(false)} htmlFor="group-name" className={`mb-2 text-xl cursor-pointer ${!joinGrp ? 'text-primary/80 border-b' : 'hover:text-primary/80'} hover:border-b w-full flex items-center justify-center text-sm font-medium text-gray-700`}>Create</label>
-          <label onClick={() => setJoinGrp(true)} htmlFor="group-name" className={`mb-2 text-xl cursor-pointer ${joinGrp ? 'text-primary/80 border-b' : 'hover:text-primary/80'} hover:border-b w-full flex items-center justify-center text-sm font-medium text-gray-700`}>Join</label>
+          <label onClick={() => setJoinGrp(false)} htmlFor="group-name" className={`mb-2 text-xl cursor-pointer ${!joinGrp ? 'dark:text-[#f5f5f5] border-b' : 'hover:text-primary/80'} hover:border-b w-full flex items-center justify-center text-sm font-medium dark:text-[#f5f5f5]`}>Create</label>
+          <label onClick={() => setJoinGrp(true)} htmlFor="group-name" className={`mb-2 text-xl cursor-pointer ${joinGrp ? 'dark:text-[#f5f5f5] border-b' : 'hover:text-primary/80'} hover:border-b w-full flex items-center justify-center text-sm font-medium dark:text-[#f5f5f5]`}>Join</label>
         </div>
 
         {!joinGrp && (<div className="mb-4">
-          <label htmlFor="group-name" className="mb-2 block text-sm font-medium text-gray-700">
+          <label htmlFor="group-name" className="mb-2 block text-sm font-medium dark:text-[#f5f5f5]">
             Group name <span className="text-red-500">*</span>
           </label>
           <input
@@ -112,7 +112,7 @@ export default function CreateGroupModal({
 
         {/* Group Name */}
         {joinGrp && (<div className="mb-4">
-          <label htmlFor="group-name" className="mb-2 block text-sm font-medium text-gray-700">
+          <label htmlFor="group-name" className="mb-2 block text-sm font-medium dark:text-[#f5f5f5]">
             Group Id <span className="text-red-500">*</span>
           </label>
           <input
@@ -129,13 +129,13 @@ export default function CreateGroupModal({
         <div className="flex justify-end gap-3 border-gray-100 pt-4">
           <button
             onClick={onClose}
-            className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+            className="cursor-pointer rounded-xl border dark:text-[#f5f5f5] dark:hover:bg-[#34345a] dark:border-[#525252] hover:bg-[#e8e8f8] border-[#d1d1d1] px-5 py-2.5 text-sm font-medium text-gray-600 transition"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
-            className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98]"
+            className="cursor-pointer rounded-xl bg-[#6567a7] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#464775] active:scale-[0.98]"
           >
             {joinGrp ? 'Join Group' : 'Create Group'}
           </button>
