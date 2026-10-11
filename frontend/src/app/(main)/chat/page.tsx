@@ -130,7 +130,7 @@ export default function Chat() {
     useEffect(() => {
         if (!selectedGroup) return
         const socket = new WebSocket(
-            `ws://127.0.0.1:8000/ws/${selectedGroup.chatId}`
+            `ws://${process.env.NEXT_PUBLIC_API_URL}/ws/${selectedGroup.chatId}`
         );
 
         socketRef.current = socket;
