@@ -130,7 +130,7 @@ export default function Chat() {
     useEffect(() => {
         if (!selectedGroup) return
         const socket = new WebSocket(
-            `ws://${process.env.NEXT_PUBLIC_API_URL}/ws/${selectedGroup.chatId}`
+            `ws://backend-desk.vercel.app/ws/${selectedGroup.chatId}`
         );
 
         socketRef.current = socket;
